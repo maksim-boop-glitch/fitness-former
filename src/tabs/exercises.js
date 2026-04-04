@@ -77,6 +77,7 @@ function renderExerciseDetail(ex) {
 }
 
 export function attachExercisesListeners() {
+  cardListenerAttached = false;  // reset on re-mount
   // Muscle pill switching
   document.getElementById('muscle-pills').addEventListener('click', e => {
     const btn = e.target.closest('[data-muscle]');
@@ -104,7 +105,11 @@ export function attachExercisesListeners() {
   attachCardListeners();
 }
 
+let cardListenerAttached = false;
+
 function attachCardListeners() {
+  if (cardListenerAttached) return;
+  cardListenerAttached = true;
   document.getElementById('exercise-list').addEventListener('click', e => {
     const card = e.target.closest('[data-exercise-id]');
     if (!card) return;
@@ -123,5 +128,5 @@ function attachCardListeners() {
     document.getElementById('analyze-this-exercise').addEventListener('click', () => {
       import('../app.js').then(m => m.navigateTo('analyze'));
     });
-  }, { once: true });
+  });
 }

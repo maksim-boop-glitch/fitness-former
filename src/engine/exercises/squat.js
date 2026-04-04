@@ -7,9 +7,9 @@ export const SQUAT_RULES = [
     severity: 'error',
     cue: 'Push your knees outward in line with your toes throughout the movement.',
     check(lm) {
-      const lKneeCave = Math.abs(lm[LM.L_KNEE].x - lm[LM.L_ANKLE].x) < 0.08;
-      const rKneeCave = Math.abs(lm[LM.R_KNEE].x - lm[LM.R_ANKLE].x) < 0.08;
-      return lKneeCave && rKneeCave;
+      const lKneeAligned = Math.abs(lm[LM.L_KNEE].x - lm[LM.L_ANKLE].x) < 0.08;
+      const rKneeAligned = Math.abs(lm[LM.R_KNEE].x - lm[LM.R_ANKLE].x) < 0.08;
+      return lKneeAligned && rKneeAligned;
     },
   },
   {

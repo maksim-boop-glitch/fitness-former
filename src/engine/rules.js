@@ -33,6 +33,9 @@ export function angleDeg(a, b, c) {
  * @returns {Array<{id, label, severity, cue, pass}>}
  */
 export function evaluateRules(rules, frames) {
+  if (frames.length === 0) return rules.map(rule => ({
+    id: rule.id, label: rule.label, severity: rule.severity, cue: rule.cue, pass: true,
+  }));
   return rules.map(rule => {
     const passCount = frames.filter(lm => rule.check(lm)).length;
     const pass = passCount / frames.length >= 0.5;

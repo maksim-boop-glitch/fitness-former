@@ -99,11 +99,26 @@ export function attachAnalyzeListeners() {
     analyzeBtn.disabled = true;
     analyzeBtn.textContent = 'Analyzing...';
 
-    const { runAnalysis } = await import('../engine/analysis-runner.js');
-    const result = await runAnalysis(previewEl, weight, unit);
+    try {
+      const { runAnalysis } = await import('../engine/analysis-runner.js');
+      const result = await runAnalysis(previewEl, weight, unit);
 
-    const { renderResults, attachResultsListeners } = await import('./results.js');
-    document.getElementById('tab-content').innerHTML = renderResults(result);
-    attachResultsListeners(result);
+      const { renderResults, attachResultsListeners } = await import('./results.js');
+      document.getElementById('tab-content').innerHTML = renderResults(result);
+      attachResultsListeners(result);
+    } catch (err) {
+      console.error('Analysis failed:', err);
+      analyzeBtn.disabled = false;
+      analyzeBtn.style.opacity = '1';
+      analyzeBtn.textContent = 'Analyze My Form';
+      // Show error below button
+      const existing = document.getElementById('analyze-error');
+      if (existing) existing.remove();
+      const errorEl = document.createElement('p');
+      errorEl.id = 'analyze-error';
+      errorEl.style.cssText = 'color:var(--score-red);font-size:0.7rem;text-align:center;margin-top:0.5rem';
+      errorEl.textContent = 'Analysis failed — try a shorter video or check your connection.';
+      analyzeBtn.after(errorEl);
+    }
   });
 }

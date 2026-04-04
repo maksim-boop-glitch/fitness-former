@@ -21,6 +21,20 @@ export async function runAnalysis(videoEl, weight, unit) {
 
   const frames = await processVideo(videoEl, 10, updateProgress);
 
+  if (frames.length === 0) {
+    const btn = document.getElementById('analyze-btn');
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.textContent = 'Analyze My Form';
+    }
+    const errorEl = document.createElement('p');
+    errorEl.style.cssText = 'color:var(--score-red);font-size:0.7rem;text-align:center;margin-top:0.5rem';
+    errorEl.textContent = 'No pose detected — make sure your full body is visible in the video.';
+    document.getElementById('analyze-btn')?.after(errorEl);
+    throw new Error('No pose frames detected');
+  }
+
   const exercise = detectExercise(frames) ?? 'squat';
   const rules = EXERCISE_RULES[exercise] ?? [];
   const ruleResults = evaluateRules(rules, frames);

@@ -7,8 +7,10 @@ export const BENCH_RULES = [
     severity: 'error',
     cue: 'Do not flare elbows to 90°. Tuck them to ~75° to protect your shoulders.',
     check(lm) {
-      const angle = angleDeg(lm[LM.L_SHOULDER], lm[LM.L_ELBOW], lm[LM.L_WRIST]);
-      return angle > 30 && angle < 110;
+      // Angle at shoulder between torso line (hip→shoulder) and upper arm (shoulder→elbow)
+      // Good form: 60-85°. Flared: > 85°. Over-tucked: < 30°.
+      const angle = angleDeg(lm[LM.L_HIP], lm[LM.L_SHOULDER], lm[LM.L_ELBOW]);
+      return angle > 30 && angle < 85;
     },
   },
   {
@@ -24,9 +26,9 @@ export const BENCH_RULES = [
   },
   {
     id: 'scapular_retraction',
-    label: 'Shoulder blades retracted',
+    label: 'Shoulders level on bench',
     severity: 'warning',
-    cue: 'Pinch your shoulder blades together before unracking — this protects your shoulders and improves power.',
+    cue: 'Keep both shoulders in contact with the bench — avoid one side rising higher than the other.',
     check(lm) {
       return Math.abs(lm[LM.L_SHOULDER].y - lm[LM.R_SHOULDER].y) < 0.06;
     },
