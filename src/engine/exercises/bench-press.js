@@ -1,0 +1,36 @@
+import { LM, angleDeg } from '../rules.js';
+
+export const BENCH_RULES = [
+  {
+    id: 'elbows_at_75',
+    label: 'Elbows at ~75° from torso',
+    severity: 'error',
+    cue: 'Do not flare elbows to 90°. Tuck them to ~75° to protect your shoulders.',
+    check(lm) {
+      // Angle at shoulder between torso line (hip→shoulder) and upper arm (shoulder→elbow)
+      // Good form: 60-85°. Flared: > 85°. Over-tucked: < 30°.
+      const angle = angleDeg(lm[LM.L_HIP], lm[LM.L_SHOULDER], lm[LM.L_ELBOW]);
+      return angle > 30 && angle < 85;
+    },
+  },
+  {
+    id: 'bar_to_lower_chest',
+    label: 'Bar lowers to lower chest',
+    severity: 'warning',
+    cue: 'Lower the bar to your lower chest / nipple line, not your upper chest or neck.',
+    check(lm) {
+      const wristY = (lm[LM.L_WRIST].y + lm[LM.R_WRIST].y) / 2;
+      const shoulderY = (lm[LM.L_SHOULDER].y + lm[LM.R_SHOULDER].y) / 2;
+      return Math.abs(wristY - shoulderY) < 0.12;
+    },
+  },
+  {
+    id: 'scapular_retraction',
+    label: 'Shoulders level on bench',
+    severity: 'warning',
+    cue: 'Keep both shoulders in contact with the bench — avoid one side rising higher than the other.',
+    check(lm) {
+      return Math.abs(lm[LM.L_SHOULDER].y - lm[LM.R_SHOULDER].y) < 0.06;
+    },
+  },
+];
