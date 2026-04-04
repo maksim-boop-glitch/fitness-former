@@ -1,0 +1,13 @@
+{
+  "name": "Fitness Former",
+  "short_name": "FitnessFormer",
+  "description": "AI form coach — upload a workout video, get instant feedback",
+  "theme_color": "#ff6b00",
+  "background_color": "#0d0d0d",
+  "display": "standalone",
+  "start_url": "/",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
