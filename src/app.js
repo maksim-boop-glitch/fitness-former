@@ -12,8 +12,9 @@ const TABS = [
 let activeTab = 'analyze';
 
 function switchTab(id) {
-  activeTab = id;
   const tab = TABS.find(t => t.id === id);
+  if (!tab) return;
+  activeTab = id;
   document.getElementById('tab-content').innerHTML = tab.render();
   document.querySelectorAll('#bottom-nav button').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === id);
@@ -29,11 +30,11 @@ function switchTab(id) {
 export function navigateTo(tabId) { switchTab(tabId); }
 
 document.getElementById('bottom-nav').innerHTML = renderNav(TABS, activeTab);
-document.getElementById('tab-content').innerHTML = TABS[0].render();
 
 document.getElementById('bottom-nav').addEventListener('click', e => {
   const btn = e.target.closest('button[data-tab]');
   if (btn) switchTab(btn.dataset.tab);
 });
 
-import('./tabs/analyze.js').then(m => m.attachAnalyzeListeners());
+// Initial tab load
+switchTab('analyze');
