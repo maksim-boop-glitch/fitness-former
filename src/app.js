@@ -38,3 +38,8 @@ document.getElementById('bottom-nav').addEventListener('click', e => {
 
 // Initial tab load
 switchTab('analyze');
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
