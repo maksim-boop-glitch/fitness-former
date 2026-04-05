@@ -1,7 +1,10 @@
 services:
   - type: web
     name: fitness-former
-    env: static
+    env: node
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    startCommand: node server/index.js
     branch: main
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
