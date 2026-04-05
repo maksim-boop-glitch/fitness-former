@@ -11,9 +11,10 @@ import { saveSession } from '../storage.js';
  * @param {HTMLVideoElement} videoEl
  * @param {number} weight
  * @param {'lbs'|'kg'} unit
+ * @param {string|null} [exerciseOverride] - skip auto-detection and use this exercise
  * @returns {Promise<{exercise, weight, unit, score, ruleResults, frames}>}
  */
-export async function runAnalysis(videoEl, weight, unit) {
+export async function runAnalysis(videoEl, weight, unit, exerciseOverride = null) {
   const updateProgress = p => {
     const btn = document.getElementById('analyze-btn');
     if (btn) btn.textContent = `Analyzing… ${Math.round(p * 100)}%`;
@@ -35,7 +36,7 @@ export async function runAnalysis(videoEl, weight, unit) {
     throw new Error('No pose frames detected');
   }
 
-  const exercise = detectExercise(frames) ?? 'squat';
+  const exercise = exerciseOverride ?? detectExercise(frames) ?? 'squat';
   const rules = EXERCISE_RULES[exercise] ?? [];
   const ruleResults = evaluateRules(rules, frames);
   const score = calculateScore(ruleResults);
