@@ -66,7 +66,7 @@ export function attachResultsListeners({ frames, ruleResults }) {
 
     const fps = 30 / 10;
     const frameIdx = Math.min(Math.floor(resultVideo.currentTime * fps), frames.length - 1);
-    drawOverlay(ctx, canvas.width, canvas.height, frames[frameIdx], ruleResults);
+    drawOverlay(ctx, canvas.width, canvas.height, frames[frameIdx], ruleResults, result.exercise);
   });
 
   document.getElementById('analyze-another').addEventListener('click', () => {
