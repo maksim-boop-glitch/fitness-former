@@ -40,7 +40,8 @@ export async function detectExerciseRoute(req, res) {
       ],
     });
 
-    const raw = message.content[0].text.trim().toLowerCase();
+    const textBlock = message.content.find(b => b.type === 'text');
+    const raw = textBlock?.text?.trim().toLowerCase() ?? '';
     const exercise = VALID_EXERCISES.find(e => raw.includes(e)) ?? null;
     res.json({ exercise });
   } catch (err) {
