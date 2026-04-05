@@ -8,7 +8,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+const allowedOrigin = process.env.ALLOWED_ORIGIN ?? '*';
+app.use(cors({ origin: allowedOrigin }));
 app.use(express.json({ limit: '10mb' }));
 
 // API routes
