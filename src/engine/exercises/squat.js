@@ -1,4 +1,4 @@
-import { LM, angleDeg } from '../rules.js';
+import { LM, angleDeg, horizDist } from '../rules.js';
 
 export const SQUAT_RULES = [
   {
@@ -7,9 +7,9 @@ export const SQUAT_RULES = [
     severity: 'error',
     cue: 'Push your knees outward in line with your toes throughout the movement.',
     check(lm) {
-      const lKneeAligned = Math.abs(lm[LM.L_KNEE].x - lm[LM.L_ANKLE].x) < 0.08;
-      const rKneeAligned = Math.abs(lm[LM.R_KNEE].x - lm[LM.R_ANKLE].x) < 0.08;
-      return lKneeAligned && rKneeAligned;
+      // Horizontal distance between knee and ankle in world XZ plane — camera-invariant
+      return horizDist(lm[LM.L_KNEE], lm[LM.L_ANKLE]) < 0.15
+          && horizDist(lm[LM.R_KNEE], lm[LM.R_ANKLE]) < 0.15;
     },
   },
   {
@@ -18,8 +18,8 @@ export const SQUAT_RULES = [
     severity: 'error',
     cue: 'Keep your chest up — avoid collapsing your torso forward.',
     check(lm) {
-      const angle = angleDeg(lm[LM.L_SHOULDER], lm[LM.L_HIP], lm[LM.L_KNEE]);
-      return angle > 90;
+      // True 3D angle at hip — correct from any camera angle
+      return angleDeg(lm[LM.L_SHOULDER], lm[LM.L_HIP], lm[LM.L_KNEE]) > 90;
     },
   },
   {
@@ -28,8 +28,9 @@ export const SQUAT_RULES = [
     severity: 'warning',
     cue: 'Try to lower your hips to at least knee height for full range of motion.',
     check(lm) {
-      const lDepth = lm[LM.L_HIP].y >= lm[LM.L_KNEE].y - 0.03;
-      const rDepth = lm[LM.R_HIP].y >= lm[LM.R_KNEE].y - 0.03;
+      // World Y is up: hip.y > knee.y when standing; at parallel they are nearly equal
+      const lDepth = lm[LM.L_HIP].y - lm[LM.L_KNEE].y < 0.05;
+      const rDepth = lm[LM.R_HIP].y - lm[LM.R_KNEE].y < 0.05;
       return lDepth && rDepth;
     },
   },

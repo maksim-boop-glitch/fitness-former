@@ -27,7 +27,7 @@ export async function loadPoseModel() {
  * @param {HTMLVideoElement} videoEl
  * @param {number} [sampleRate=10]  — process 1 frame every N video frames
  * @param {(progress: number) => void} [onProgress]
- * @returns {Promise<Array<Array<{x,y,z,visibility}>>>}
+ * @returns {Promise<Array<{image: Array<{x,y,z,visibility}>, world: Array<{x,y,z,visibility}>}>>}
  */
 export async function processVideo(videoEl, sampleRate = 10, onProgress) {
   await loadPoseModel();
@@ -50,8 +50,8 @@ export async function processVideo(videoEl, sampleRate = 10, onProgress) {
     ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
     const result = poseLandmarker.detectForVideo(canvas, performance.now());
 
-    if (result.landmarks?.[0]) {
-      frames.push(result.landmarks[0]);
+    if (result.landmarks?.[0] && result.worldLandmarks?.[0]) {
+      frames.push({ image: result.landmarks[0], world: result.worldLandmarks[0] });
     }
 
     onProgress?.((i + 1) / totalFrames);
