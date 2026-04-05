@@ -1,48 +1,75 @@
 import { LM } from './rules.js';
 
+/**
+ * Stage 1 — Body orientation.
+ *
+ * The y-axis in MediaPipe normalized image coordinates increases downward
+ * (0 = top of frame, 1 = bottom). When a person stands upright the shoulder
+ * landmark is well above the hip (lower y value), producing a large
+ * |shoulderY − hipY| difference. When the body is horizontal (lying down)
+ * the shoulder and hip are at nearly the same y position.
+ *
+ *  |shoulderY − hipY| < HORIZONTAL_THRESHOLD  →  horizontal body
+ *  |shoulderY − hipY| ≥ HORIZONTAL_THRESHOLD  →  vertical body
+ */
+const HORIZONTAL_THRESHOLD = 0.15;
+
+/**
+ * Stage 2 — Exercise classification within each orientation group.
+ *
+ * Horizontal exercises  →  push-up | bench-press
+ *   Distinguisher: ankle y-position relative to hip.
+ *   Push-up: whole body on the floor, ankles at the same height as hips.
+ *   Bench press: torso elevated on bench, ankles lower (feet on floor).
+ *
+ * Vertical exercises  →  squat | deadlift
+ *   Distinguisher: hip y-position relative to knee.
+ *   Squat: hips drop to or below knee level (hip y ≥ knee y).
+ *   Deadlift: hips stay above knees with a forward torso lean.
+ */
+
 export function detectExercise(frames) {
   const scores = { squat: 0, deadlift: 0, 'push-up': 0, 'bench-press': 0 };
   let scoredFrames = 0;
 
   for (const lm of frames) {
-    // Average left+right for robustness regardless of which side faces the camera
+    // Average left+right landmarks for robustness across all camera angles
     const shoulderY = (lm[LM.L_SHOULDER].y + lm[LM.R_SHOULDER].y) / 2;
     const hipY      = (lm[LM.L_HIP].y + lm[LM.R_HIP].y) / 2;
     const kneeY     = (lm[LM.L_KNEE].y + lm[LM.R_KNEE].y) / 2;
     const ankleY    = (lm[LM.L_ANKLE].y + lm[LM.R_ANKLE].y) / 2;
 
-    // Horizontal body = push-up or bench press. Check this BEFORE the yVariation
-    // filter — a flat body has near-zero vertical spread by design, not because
-    // the frame is uninformative.
-    const isHorizontal = Math.abs(shoulderY - hipY) < 0.15;
+    // ── Stage 1: Body orientation ──────────────────────────────────────────
+    const shoulderHipYDiff = Math.abs(shoulderY - hipY);
+    const isHorizontal = shoulderHipYDiff < HORIZONTAL_THRESHOLD;
+
     if (isHorizontal) {
-      // Require the body to actually span horizontally — guards against frames
-      // where all landmarks collapse to the same point (low-confidence detections).
+      // ── Stage 2a: Horizontal exercises ───────────────────────────────────
+      // Guard: require the body to actually span the frame horizontally.
+      // Collapsed/low-confidence landmark clusters have near-zero x-spread.
       const shoulderX = (lm[LM.L_SHOULDER].x + lm[LM.R_SHOULDER].x) / 2;
       const ankleX    = (lm[LM.L_ANKLE].x + lm[LM.R_ANKLE].x) / 2;
       if (Math.abs(shoulderX - ankleX) < 0.15) continue;
 
-      // Push-up: entire body (including ankles) is flat on the floor at the same height.
-      // Bench press: torso is on an elevated bench; ankles hang lower (feet on floor).
+      // Push-up: entire body (ankles included) lies flat at the same height.
+      // Bench press: ankles are lower than the torso (feet on the floor below the bench).
       const ankleAlignedWithBody = Math.abs(ankleY - hipY) < 0.2;
       scores[ankleAlignedWithBody ? 'push-up' : 'bench-press'] += 1;
       scoredFrames++;
-      continue;
-    }
+    } else {
+      // ── Stage 2b: Vertical exercises ─────────────────────────────────────
+      // Skip frames where landmarks have collapsed to a single point.
+      const yVariation = shoulderHipYDiff + Math.abs(hipY - kneeY) + Math.abs(kneeY - ankleY);
+      if (yVariation < 0.1) continue;
+      scoredFrames++;
 
-    // For upright exercises skip frames with no meaningful vertical spread
-    const yVariation = Math.abs(shoulderY - hipY) + Math.abs(hipY - kneeY) + Math.abs(kneeY - ankleY);
-    if (yVariation < 0.1) continue;
-    scoredFrames++;
-
-    if (hipY >= kneeY - 0.05) {
-      scores.squat += 1;
-      continue;
-    }
-
-    const torsoLean = Math.abs(shoulderY - hipY);
-    if (torsoLean < 0.25 && hipY < kneeY) {
-      scores.deadlift += 1;
+      // Squat: hips descend to or below knee level.
+      if (hipY >= kneeY - 0.05) {
+        scores.squat += 1;
+      } else if (shoulderHipYDiff < 0.25) {
+        // Deadlift: hips above knees with a forward torso lean (compressed shoulder–hip gap).
+        scores.deadlift += 1;
+      }
     }
   }
 
