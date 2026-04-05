@@ -111,6 +111,7 @@ export function attachAnalyzeListeners() {
   videoInput.addEventListener('change', async e => {
     videoFile = e.target.files[0];
     if (!videoFile) return;
+    if (previewEl.src?.startsWith('blob:')) URL.revokeObjectURL(previewEl.src);
     const src = URL.createObjectURL(videoFile);
     previewEl.src = src;
     sessionStorage.setItem('ff_video_src', src);
@@ -162,7 +163,9 @@ export function attachAnalyzeListeners() {
       const errorEl = document.createElement('p');
       errorEl.id = 'analyze-error';
       errorEl.style.cssText = 'color:var(--score-red);font-size:0.7rem;text-align:center;margin-top:0.5rem';
-      errorEl.textContent = 'Analysis failed — try a shorter video or check your connection.';
+      errorEl.textContent = err.message === 'No pose frames detected'
+        ? 'No pose detected — make sure your full body is visible in the video.'
+        : 'Analysis failed — try a shorter video or check your connection.';
       analyzeBtn.after(errorEl);
     }
   });

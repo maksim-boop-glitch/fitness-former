@@ -2,20 +2,26 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const VALID_EXERCISES = ['squat', 'deadlift', 'push-up', 'bench-press'];
 
+let _client = null;
+function getClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+  if (!_client) _client = new Anthropic({ apiKey });
+  return _client;
+}
+
 export async function detectExerciseRoute(req, res) {
   const { imageBase64 } = req.body;
   if (!imageBase64) {
     return res.status(400).json({ error: 'imageBase64 is required' });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    // API key not configured — return null so frontend falls back to heuristic
+  const client = getClient();
+  if (!client) {
     return res.json({ exercise: null });
   }
 
   try {
-    const client = new Anthropic({ apiKey });
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 20,
@@ -45,7 +51,7 @@ export async function detectExerciseRoute(req, res) {
     const exercise = VALID_EXERCISES.find(e => raw.includes(e)) ?? null;
     res.json({ exercise });
   } catch (err) {
-    console.error('Claude API error:', err.message);
+    console.error('Claude API error:', err.message, err.status ?? '');
     res.status(500).json({ error: 'Detection failed', exercise: null });
   }
 }

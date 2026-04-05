@@ -24,8 +24,10 @@ export async function detectExerciseViaVision(videoEl) {
 
 function extractFrame(videoEl) {
   return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
+    const timeout = setTimeout(() => reject(new Error('seek timeout')), 5000);
+
     // Downscale to 320x240 — sufficient for Claude vision to identify exercise type
+    const canvas = document.createElement('canvas');
     canvas.width = 320;
     canvas.height = 240;
     const ctx = canvas.getContext('2d');
@@ -33,11 +35,11 @@ function extractFrame(videoEl) {
     videoEl.currentTime = videoEl.duration * 0.25;
 
     videoEl.addEventListener('seeked', function onSeeked() {
+      clearTimeout(timeout);
       videoEl.removeEventListener('seeked', onSeeked);
       try {
         ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(dataUrl.split(',')[1]);
+        resolve(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
       } catch (err) {
         reject(err);
       }

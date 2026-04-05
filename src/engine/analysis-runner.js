@@ -29,10 +29,6 @@ export async function runAnalysis(videoEl, weight, unit, exerciseOverride = null
       btn.style.opacity = '1';
       btn.textContent = 'Analyze My Form';
     }
-    const errorEl = document.createElement('p');
-    errorEl.style.cssText = 'color:var(--score-red);font-size:0.7rem;text-align:center;margin-top:0.5rem';
-    errorEl.textContent = 'No pose detected — make sure your full body is visible in the video.';
-    document.getElementById('analyze-btn')?.after(errorEl);
     throw new Error('No pose frames detected');
   }
 
