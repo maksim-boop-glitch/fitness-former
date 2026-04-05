@@ -2,6 +2,6 @@ services:
   - type: web
     name: fitness-former
     env: static
-    buildCommand: npm install --legacy-peer-deps && npm run build
+    buildCommand: npm install && npm run build
     staticPublishPath: dist
-    branch: feat/mvp
+    branch: main
