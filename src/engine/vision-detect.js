@@ -25,6 +25,7 @@ export async function detectExerciseViaVision(videoEl) {
 function extractFrame(videoEl) {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
+    // Downscale to 320x240 — sufficient for Claude vision to identify exercise type
     canvas.width = 320;
     canvas.height = 240;
     const ctx = canvas.getContext('2d');

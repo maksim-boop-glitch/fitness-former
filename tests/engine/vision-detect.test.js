@@ -31,6 +31,8 @@ describe('detectExerciseViaVision', () => {
     });
   });
 
+  afterEach(() => vi.restoreAllMocks());
+
   it('returns the exercise name from a successful API response', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
