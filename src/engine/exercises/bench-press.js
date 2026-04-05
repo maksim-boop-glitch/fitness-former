@@ -9,8 +9,9 @@ export const BENCH_RULES = [
     check(lm) {
       // Angle at shoulder between torso line (hip→shoulder) and upper arm (shoulder→elbow)
       // Good form: 60-85°. Flared: > 85°. Over-tucked: < 30°.
-      const angle = angleDeg(lm[LM.L_HIP], lm[LM.L_SHOULDER], lm[LM.L_ELBOW]);
-      return angle > 30 && angle < 85;
+      const lAngle = angleDeg(lm[LM.L_HIP], lm[LM.L_SHOULDER], lm[LM.L_ELBOW]);
+      const rAngle = angleDeg(lm[LM.R_HIP], lm[LM.R_SHOULDER], lm[LM.R_ELBOW]);
+      return lAngle > 30 && lAngle < 85 && rAngle > 30 && rAngle < 85;
     },
   },
   {

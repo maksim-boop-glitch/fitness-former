@@ -48,7 +48,7 @@ export function renderResults({ exercise, weight, unit, score, ruleResults }) {
   `;
 }
 
-export function attachResultsListeners({ frames, ruleResults }) {
+export function attachResultsListeners({ frames, ruleResults, exercise }) {
   const resultVideo = document.getElementById('result-video');
   const canvas      = document.getElementById('overlay-canvas');
 
@@ -66,7 +66,7 @@ export function attachResultsListeners({ frames, ruleResults }) {
 
     const fps = 30 / 10;
     const frameIdx = Math.min(Math.floor(resultVideo.currentTime * fps), frames.length - 1);
-    drawOverlay(ctx, canvas.width, canvas.height, frames[frameIdx].image ?? frames[frameIdx], ruleResults, result.exercise);
+    drawOverlay(ctx, canvas.width, canvas.height, frames[frameIdx].image ?? frames[frameIdx], ruleResults, exercise);
   });
 
   document.getElementById('analyze-another').addEventListener('click', () => {
