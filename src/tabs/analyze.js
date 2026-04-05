@@ -80,7 +80,7 @@ export function attachAnalyzeListeners() {
   const exerciseSelect    = document.getElementById('exercise-select');
   const exerciseDetecting = document.getElementById('exercise-detecting');
 
-  if (!weightDisplay) return;
+  if (!weightDisplay || !exerciseSelect || !exerciseDetecting) return;
 
   document.getElementById('weight-up').addEventListener('click', () => {
     weight += unit === 'lbs' ? 5 : 2.5;
