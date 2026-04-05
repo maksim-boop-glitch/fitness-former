@@ -2,43 +2,54 @@ import { LM } from './rules.js';
 
 export function detectExercise(frames) {
   const scores = { squat: 0, deadlift: 0, 'push-up': 0, 'bench-press': 0 };
+  let scoredFrames = 0;
 
   for (const lm of frames) {
-    const lShoulder = lm[LM.L_SHOULDER];
-    const lHip      = lm[LM.L_HIP];
-    const lKnee     = lm[LM.L_KNEE];
-    const lAnkle    = lm[LM.L_ANKLE];
+    // Average left+right for robustness regardless of which side faces the camera
+    const shoulderY = (lm[LM.L_SHOULDER].y + lm[LM.R_SHOULDER].y) / 2;
+    const hipY      = (lm[LM.L_HIP].y + lm[LM.R_HIP].y) / 2;
+    const kneeY     = (lm[LM.L_KNEE].y + lm[LM.R_KNEE].y) / 2;
+    const ankleY    = (lm[LM.L_ANKLE].y + lm[LM.R_ANKLE].y) / 2;
 
-    // Check if frame has meaningful variation in y-coordinates
-    const yVariation = Math.abs(lShoulder.y - lHip.y) + Math.abs(lHip.y - lKnee.y) + Math.abs(lKnee.y - lAnkle.y);
-    if (yVariation < 0.05) continue; // Skip frames with no meaningful vertical variation
-
-    const isHorizontal = Math.abs(lShoulder.y - lHip.y) < 0.1;
-
+    // Horizontal body = push-up or bench press. Check this BEFORE the yVariation
+    // filter — a flat body has near-zero vertical spread by design, not because
+    // the frame is uninformative.
+    const isHorizontal = Math.abs(shoulderY - hipY) < 0.15;
     if (isHorizontal) {
-      const ankleHorizontal = Math.abs(lAnkle.y - lHip.y) < 0.15;
-      if (ankleHorizontal) {
-        scores['push-up'] += 1;
-      } else {
-        scores['bench-press'] += 1;
-      }
+      // Require the body to actually span horizontally — guards against frames
+      // where all landmarks collapse to the same point (low-confidence detections).
+      const shoulderX = (lm[LM.L_SHOULDER].x + lm[LM.R_SHOULDER].x) / 2;
+      const ankleX    = (lm[LM.L_ANKLE].x + lm[LM.R_ANKLE].x) / 2;
+      if (Math.abs(shoulderX - ankleX) < 0.15) continue;
+
+      // Push-up: entire body (including ankles) is flat on the floor at the same height.
+      // Bench press: torso is on an elevated bench; ankles hang lower (feet on floor).
+      const ankleAlignedWithBody = Math.abs(ankleY - hipY) < 0.2;
+      scores[ankleAlignedWithBody ? 'push-up' : 'bench-press'] += 1;
+      scoredFrames++;
       continue;
     }
 
-    if (lHip.y >= lKnee.y - 0.05) {
+    // For upright exercises skip frames with no meaningful vertical spread
+    const yVariation = Math.abs(shoulderY - hipY) + Math.abs(hipY - kneeY) + Math.abs(kneeY - ankleY);
+    if (yVariation < 0.1) continue;
+    scoredFrames++;
+
+    if (hipY >= kneeY - 0.05) {
       scores.squat += 1;
       continue;
     }
 
-    const torsoAngle = Math.abs(lShoulder.y - lHip.y);
-    if (torsoAngle < 0.25 && lHip.y < lKnee.y) {
+    const torsoLean = Math.abs(shoulderY - hipY);
+    if (torsoLean < 0.25 && hipY < kneeY) {
       scores.deadlift += 1;
     }
   }
 
+  if (scoredFrames === 0) return null;
   const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
   if (best[1] === 0) return null;
-  const confidence = best[1] / frames.length;
-  if (confidence < 0.5) return null;
+  const confidence = best[1] / scoredFrames;
+  if (confidence < 0.3) return null;
   return best[0];
 }
