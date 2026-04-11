@@ -65,6 +65,7 @@ export async function startCameraPreview(container) {
   const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
   const ext = mimeType === 'video/webm' ? 'webm' : 'mp4';
 
+  const savedHTML = container.innerHTML;
   container.innerHTML = `
     <div id="camera-preview-wrap" style="
       position:relative;
@@ -127,6 +128,7 @@ export async function startCameraPreview(container) {
     await liveVideo.play();
   } catch (err) {
     stopCameraStream();
+    container.innerHTML = savedHTML;
     throw err;
   }
 
@@ -180,6 +182,7 @@ export async function startCameraPreview(container) {
         const blob = new Blob(chunks, { type: mimeType });
         const file = new File([blob], `recording.${ext}`, { type: mimeType });
         stopCameraStream();
+        container.innerHTML = '';
         if (fileCallback) fileCallback(file);
       };
       recorder.start();
