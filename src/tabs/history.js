@@ -7,6 +7,14 @@ const EXERCISE_LABELS = {
   'push-up':     'Push-up',
 };
 
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function scoreColor(score) {
   if (score >= 75) return '#00cc44';
   if (score >= 51) return '#cc8800';
@@ -18,7 +26,8 @@ function formatWeight(weight, unit) {
 }
 
 function formatDate(iso) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const d = new Date(iso);
+  return isNaN(d) ? '—' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function renderDots(ruleResults) {
@@ -35,8 +44,8 @@ function renderRuleRows(ruleResults) {
     const icon = r.pass ? '✓' : (r.severity === 'error' ? '✗' : '~');
     return `
       <div style="background:${bg};border-left:3px solid ${col};padding:5px 8px;border-radius:0 4px 4px 0;margin-bottom:3px">
-        <div style="color:${col};font-size:0.65rem;font-weight:700">${icon} ${r.label}</div>
-        ${!r.pass ? `<div style="color:var(--text-muted);font-size:0.6rem;margin-top:1px">${r.cue}</div>` : ''}
+        <div style="color:${col};font-size:0.65rem;font-weight:700">${icon} ${esc(r.label)}</div>
+        ${!r.pass ? `<div style="color:var(--text-muted);font-size:0.6rem;margin-top:1px">${esc(r.cue)}</div>` : ''}
       </div>`;
   }).join('');
 }
@@ -51,12 +60,12 @@ function renderSessionCard(s, i) {
         <div style="width:38px;height:38px;border-radius:50%;background:#111;
                     border:2.5px solid ${col};display:flex;align-items:center;
                     justify-content:center;flex-shrink:0">
-          <span style="font-size:0.65rem;font-weight:800;color:${col}">${s.score}</span>
+          <span style="font-size:0.65rem;font-weight:800;color:${col}">${Number(s.score)}</span>
         </div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:0.75rem;font-weight:700;color:var(--text)">${label}</div>
+          <div style="font-size:0.75rem;font-weight:700;color:var(--text)">${esc(label)}</div>
           <div style="font-size:0.6rem;color:var(--text-muted)">
-            ${formatWeight(s.weight, s.unit)} · ${formatDate(s.date)}
+            ${esc(formatWeight(s.weight, s.unit))} · ${esc(formatDate(s.date))}
           </div>
         </div>
         <div style="display:flex;gap:3px;align-items:center">${renderDots(s.ruleResults ?? [])}</div>
@@ -95,7 +104,6 @@ export function attachHistoryListeners() {
 
       if (!isOpen) {
         detail.style.display = 'block';
-        card.querySelector('.ff-chevron').textContent = '›';
         card.querySelector('.ff-chevron').style.transform = 'rotate(90deg)';
       }
     });
