@@ -33,6 +33,8 @@ export function scoreBadgeHTML(score) {
 /**
  * Renders the gradient bar with a position marker.
  * @param {number} score 0-100
+ * @param {object} [opts]
+ * @param {string} [opts.marginBottom='0.75rem'] CSS margin-bottom on the wrapper div
  * @returns {string} HTML
  */
 export function scoreBarHTML(score, { marginBottom = '0.75rem' } = {}) {
