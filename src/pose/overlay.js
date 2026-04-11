@@ -15,6 +15,27 @@ const RULE_JOINTS = {
   scapular_retraction: ['L_SHOULDER', 'R_SHOULDER'],
 };
 
+const RULE_ANGLES = {
+  // Squat
+  knees_over_toes:    null,
+  back_neutral:       { a: 'L_SHOULDER', b: 'L_HIP',      c: 'L_KNEE'   },
+  squat_depth:        null,
+  // Deadlift
+  back_flat:          { a: 'L_SHOULDER', b: 'L_HIP',      c: 'L_KNEE'   },
+  hips_not_too_high:  null,
+  bar_over_feet:      null,
+  // Push-up
+  body_straight:      { a: 'L_SHOULDER', b: 'L_HIP',      c: 'L_ANKLE'  },
+  elbows_not_flared:  { a: 'L_SHOULDER', b: 'L_ELBOW',    c: 'L_WRIST'  },
+  full_depth:         { a: 'L_SHOULDER', b: 'L_ELBOW',    c: 'L_WRIST'  }, // same triplet as elbows_not_flared — intentional, threshold differs
+  // Bench press
+  elbows_at_75:       { a: 'L_HIP',      b: 'L_SHOULDER', c: 'L_ELBOW'  },
+  bar_to_lower_chest: null,
+  scapular_retraction:null,
+};
+
+const SEVERITY_COLOR_MAP = { error: '#cc2200', warning: '#cc8800' };
+
 // Skeleton connections drawn as bones between joints
 const BONES = [
   // Torso
@@ -46,10 +67,45 @@ export function getJointColor(jointName, results) {
   return hasError ? '#cc2200' : '#cc8800';
 }
 
-export function buildCallouts(results) {
-  return results
-    .filter(r => !r.pass)
-    .map(r => ({ id: r.id, label: r.label, severity: r.severity }));
+function drawAngleBadge(ctx, vx, vy, ax, ay, cx, cy, deg, color) {
+  const R = 22;
+
+  const angleA = Math.atan2(ay - vy, ax - vx);
+  const angleC = Math.atan2(cy - vy, cx - vx);
+
+  ctx.save();
+  ctx.setLineDash([3, 3]);
+  ctx.strokeStyle = color + 'cc';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  let start = angleA, end = angleC;
+  let ccw = false;
+  const diff = ((end - start) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+  if (diff > Math.PI) { ccw = true; }
+  ctx.arc(vx, vy, R, start, end, ccw);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  const midAngle = start + (ccw ? -(Math.PI * 2 - diff) : diff) / 2;
+  const bx = vx + (R + 18) * Math.cos(midAngle);
+  const by = vy + (R + 18) * Math.sin(midAngle);
+  const label = `${Math.round(deg)}°`;
+  ctx.font = 'bold 9px monospace';
+  const tw = ctx.measureText(label).width;
+  const pad = 5;
+
+  ctx.fillStyle = color + 'e6';
+  ctx.beginPath();
+  ctx.roundRect(bx - tw / 2 - pad, by - 8, tw + pad * 2, 16, 4);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, bx, by);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 }
 
 /**
@@ -110,7 +166,7 @@ function drawSurface(ctx, width, height, landmarks, exercise) {
 
 export function drawOverlay(ctx, width, height, landmarks, ruleResults, exercise) {
   // ── Bones ──────────────────────────────────────────────────────────────
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 3;
   BONES.forEach(([a, b]) => {
     const lmA = landmarks[LM[a]];
     const lmB = landmarks[LM[b]];
@@ -145,29 +201,39 @@ export function drawOverlay(ctx, width, height, landmarks, ruleResults, exercise
     const color = getJointColor(name, ruleResults);
 
     ctx.beginPath();
-    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.shadowColor = color;
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 10;
     ctx.fill();
     ctx.shadowBlur = 0;
   });
 
+  // ── Angle badges at failing/warning joints ─────────────────────────────
+  ruleResults
+    .filter(r => !r.pass && RULE_ANGLES[r.id])
+    .forEach(r => {
+      const joints = RULE_ANGLES[r.id];
+      const lmA = landmarks[LM[joints.a]];
+      const lmB = landmarks[LM[joints.b]];
+      const lmC = landmarks[LM[joints.c]];
+      if (!lmA || !lmB || !lmC) return;
+      if (lmA.visibility < 0.5 || lmB.visibility < 0.5 || lmC.visibility < 0.5) return;
+
+      const ax = lmA.x * width, ay = lmA.y * height;
+      const bx = lmB.x * width, by = lmB.y * height;
+      const cx = lmC.x * width, cy = lmC.y * height;
+
+      const abx = ax - bx, aby = ay - by;
+      const cbx = cx - bx, cby = cy - by;
+      const dot = abx * cbx + aby * cby;
+      const mag = Math.sqrt((abx ** 2 + aby ** 2) * (cbx ** 2 + cby ** 2));
+      const deg = mag === 0 ? 0 : Math.acos(Math.max(-1, Math.min(1, dot / mag))) * (180 / Math.PI);
+
+      const color = SEVERITY_COLOR_MAP[r.severity] ?? '#cc2200';
+      drawAngleBadge(ctx, bx, by, ax, ay, cx, cy, deg, color);
+    });
+
   // ── Floor / bench surface ──────────────────────────────────────────────
   if (exercise) drawSurface(ctx, width, height, landmarks, exercise);
-
-  // ── Warning callouts ───────────────────────────────────────────────────
-  const callouts = buildCallouts(ruleResults);
-  callouts.forEach((c, i) => {
-    const badgeX = width - 8;
-    const badgeY = height - 12 - i * 22;
-    const color = c.severity === 'error' ? '#cc2200' : '#cc8800';
-    ctx.font = 'bold 10px sans-serif';
-    const text = `⚠ ${c.label}`;
-    const tw = ctx.measureText(text).width;
-    ctx.fillStyle = `${color}dd`;
-    ctx.fillRect(badgeX - tw - 8, badgeY - 12, tw + 10, 18);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(text, badgeX - tw - 3, badgeY);
-  });
 }

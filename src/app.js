@@ -1,10 +1,12 @@
 import { renderNav } from './ui/nav.js';
 import { renderAnalyze } from './tabs/analyze.js';
 import { renderExercises } from './tabs/exercises.js';
+import { renderHistory, attachHistoryListeners } from './tabs/history.js';
+import { stopAnimation } from './ui/exercise-animation.js';
 
 const TABS = [
   { id: 'analyze',   label: 'Analyze',   icon: '📹', render: renderAnalyze },
-  { id: 'history',   label: 'History',   icon: '📋', render: () => '<p style="color:var(--text-muted);padding:2rem;text-align:center">Sign in to view history</p>' },
+  { id: 'history',   label: 'History',   icon: '📋', render: renderHistory },
   { id: 'exercises', label: 'Exercises', icon: '💪', render: renderExercises },
   { id: 'profile',   label: 'Profile',   icon: '👤', render: () => '<p style="color:var(--text-muted);padding:2rem;text-align:center">Sign in / Sign up (coming soon)</p>' },
 ];
@@ -12,6 +14,7 @@ const TABS = [
 let activeTab = 'analyze';
 
 function switchTab(id) {
+  stopAnimation();
   const tab = TABS.find(t => t.id === id);
   if (!tab) return;
   activeTab = id;
@@ -24,6 +27,9 @@ function switchTab(id) {
   }
   if (id === 'exercises') {
     import('./tabs/exercises.js').then(m => m.attachExercisesListeners());
+  }
+  if (id === 'history') {
+    attachHistoryListeners();
   }
 }
 
