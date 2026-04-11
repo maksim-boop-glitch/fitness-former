@@ -33,14 +33,22 @@ export function horizDist(a, b) {
  * Evaluates a set of rules against an array of pose frames.
  * Frames may be bare landmark arrays OR { image, world } objects.
  * Rules receive world landmarks when available.
+ *
+ * @param {Array} rules
+ * @param {Array} frames
+ * @param {Set<number>|null} [phaseFrames] - when provided, only these frame
+ *   indices are evaluated. null = evaluate all frames.
  */
-export function evaluateRules(rules, frames) {
-  if (frames.length === 0) return rules.map(rule => ({
+export function evaluateRules(rules, frames, phaseFrames = null) {
+  const active = phaseFrames
+    ? frames.filter((_, i) => phaseFrames.has(i))
+    : frames;
+  if (active.length === 0) return rules.map(rule => ({
     id: rule.id, label: rule.label, severity: rule.severity, cue: rule.cue, pass: true,
   }));
   return rules.map(rule => {
-    const passCount = frames.filter(f => rule.check(f.world ?? f)).length;
-    const pass = passCount / frames.length >= 0.5;
+    const passCount = active.filter(f => rule.check(f.world ?? f)).length;
+    const pass = passCount / active.length >= 0.5;
     return { id: rule.id, label: rule.label, severity: rule.severity, cue: rule.cue, pass };
   });
 }
