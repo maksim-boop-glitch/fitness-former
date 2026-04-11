@@ -39,7 +39,7 @@ export async function runAnalysis(videoEl, weight, unit, exerciseOverride = null
   const { shinLength } = computeBodyMetrics(worldFrames);
   const phaseFrames = getBottomPhaseFrames(worldFrames, exercise);
   const rules = getExerciseRules(exercise, shinLength);
-  const ruleResults = evaluateRules(rules, frames, phaseFrames);
+  const ruleResults = evaluateRules(rules, worldFrames, phaseFrames);
   const score = calculateScore(ruleResults);
 
   saveSession({ exercise, weight, unit, score, ruleResults });
