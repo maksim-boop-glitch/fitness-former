@@ -1,4 +1,4 @@
-# Camera Recording — Design Spec
+d# Camera Recording — Design Spec
 
 **Goal:** Replace the single drop zone on the Analyze tab with two side-by-side cards (Record | Upload). On mobile, Record delegates to the OS camera. On desktop, Record opens an inline live preview with a record/stop button. A permission-denied state shows browser-specific unblock instructions inline.
 
@@ -45,6 +45,16 @@ On mobile (`isMobile() === true`), tapping Record triggers a separate hidden fil
 ```
 
 This opens the OS camera app. The returned file is handled identically to the Upload path (preview, exercise detection, enable Analyze button).
+
+Immediately after triggering the file input, show a dismissible hint below the two cards:
+
+```
+📱 If the camera didn't open, check
+   Settings → Privacy → Camera and
+   allow access for your browser.    ×
+```
+
+The hint auto-hides after 6 seconds OR when the `change` event fires on the input (meaning the camera opened successfully). The `×` button dismisses it immediately. It is rendered as a small muted card — not a red error state.
 
 ---
 
