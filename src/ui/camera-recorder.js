@@ -123,7 +123,12 @@ export async function startCameraPreview(container) {
 
   const liveVideo = document.getElementById('camera-live');
   liveVideo.srcObject = stream;
-  await liveVideo.play();
+  try {
+    await liveVideo.play();
+  } catch (err) {
+    stopCameraStream();
+    throw err;
+  }
 
   let fileCallback = null;
   let recorder = null;
@@ -200,6 +205,7 @@ export async function startCameraPreview(container) {
       fileCallback = callback;
     },
     cancel() {
+      fileCallback = null;
       stopRecording();
       stopCameraStream();
       container.innerHTML = '';
