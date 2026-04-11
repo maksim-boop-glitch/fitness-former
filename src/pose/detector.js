@@ -29,7 +29,7 @@ export async function loadPoseModel() {
  * @param {(progress: number) => void} [onProgress]
  * @returns {Promise<Array<{image: Array<{x,y,z,visibility}>, world: Array<{x,y,z,visibility}>}>>}
  */
-export async function processVideo(videoEl, sampleRate = 10, onProgress) {
+export async function processVideo(videoEl, sampleRate = 5, onProgress) {
   await loadPoseModel();
 
   const canvas = document.createElement('canvas');
