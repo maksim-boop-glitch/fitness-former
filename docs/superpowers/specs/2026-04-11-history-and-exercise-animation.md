@@ -83,12 +83,12 @@ function renderSessionCard(s, i) {
             ${formatWeight(s.weight, s.unit)} · ${formatDate(s.date)}
           </div>
         </div>
-        <div style="display:flex;gap:3px;align-items:center">${renderDots(s.ruleResults)}</div>
+        <div style="display:flex;gap:3px;align-items:center">${renderDots(s.ruleResults ?? [])}</div>
         <span class="ff-chevron" style="color:#444;font-size:0.8rem;transition:transform .2s">›</span>
       </div>
       <div class="ff-history-detail" id="ff-detail-${i}"
            style="display:none;padding:0 10px 10px">
-        ${renderRuleRows(s.ruleResults)}
+        ${renderRuleRows(s.ruleResults ?? [])}
       </div>
     </div>`;
 }
@@ -357,6 +357,7 @@ export function stopAnimation() {
 **In `attachExercisesListeners`:** after rendering the exercise detail, start the animation. The existing code handles navigation from the exercise list to the detail view via a click handler. After `renderExerciseDetail` is inserted into the DOM, add:
 
 ```js
+// Top-level import (at top of exercises.js):
 import { startAnimation, stopAnimation } from '../ui/exercise-animation.js';
 
 // When showing exercise detail:
