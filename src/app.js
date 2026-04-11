@@ -2,6 +2,7 @@ import { renderNav } from './ui/nav.js';
 import { renderAnalyze } from './tabs/analyze.js';
 import { renderExercises } from './tabs/exercises.js';
 import { renderHistory, attachHistoryListeners } from './tabs/history.js';
+import { stopAnimation } from './ui/exercise-animation.js';
 
 const TABS = [
   { id: 'analyze',   label: 'Analyze',   icon: '📹', render: renderAnalyze },
@@ -13,6 +14,7 @@ const TABS = [
 let activeTab = 'analyze';
 
 function switchTab(id) {
+  stopAnimation();
   const tab = TABS.find(t => t.id === id);
   if (!tab) return;
   activeTab = id;

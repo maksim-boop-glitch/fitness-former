@@ -1,4 +1,5 @@
 import { MUSCLE_GROUPS, exercisesByMuscle, EXERCISES } from '../data/exercise-library.js';
+import { startAnimation, stopAnimation } from '../ui/exercise-animation.js';
 
 let selectedMuscle = 'Chest';
 
@@ -62,9 +63,8 @@ function renderExerciseDetail(ex) {
     <div class="card">
       <div style="font-weight:700;font-size:0.95rem;margin-bottom:2px">${ex.name}</div>
       <div style="color:var(--text-muted);font-size:0.65rem;margin-bottom:0.75rem">${capitalize(ex.equipment)} · ${ex.muscle}</div>
-      <div style="background:#000;border-radius:6px;height:140px;display:flex;align-items:center;justify-content:center;margin-bottom:0.75rem">
-        <span style="color:#333;font-size:0.7rem">[ Form guide video ]</span>
-      </div>
+      <canvas id="exercise-anim-canvas" width="300" height="180"
+        style="width:100%;border-radius:6px;background:#000;display:block;margin-bottom:0.75rem"></canvas>
       <div style="font-size:0.65rem;color:var(--accent);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Key cues</div>
       <ul style="padding-left:1rem;color:var(--text-dim);font-size:0.7rem;line-height:1.8">
         ${ex.cues.map(c => `<li>${c}</li>`).join('')}
@@ -119,8 +119,11 @@ function attachCardListeners() {
     const detail = document.getElementById('exercise-detail');
     detail.style.display = 'block';
     detail.innerHTML = renderExerciseDetail(ex);
+    const canvas = document.getElementById('exercise-anim-canvas');
+    if (canvas) startAnimation(canvas, ex.id);
 
     document.getElementById('back-to-list').addEventListener('click', () => {
+      stopAnimation();
       detail.style.display = 'none';
       document.getElementById('exercise-list').style.display = 'block';
     });
