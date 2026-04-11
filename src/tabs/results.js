@@ -11,7 +11,7 @@ const EXERCISE_LABELS = {
 const SEVERITY_COLOR = { error: 'var(--score-red)', warning: 'var(--score-amber)' };
 const SEVERITY_ICON  = { error: '✗', warning: '~' };
 
-function scoreColor(score) {
+function scoreColorVar(score) {
   if (score >= 75) return 'var(--score-green)';
   if (score >= 51) return 'var(--score-amber)';
   return 'var(--score-red)';
@@ -41,7 +41,7 @@ export function renderResults({ exercise, weight, unit, score, ruleResults }) {
   .ff-video-wrap   { position: relative; background: #000; border-radius: var(--radius) var(--radius) 0 0; overflow: hidden; }
   .ff-score-strip  { background: #111; border-radius: 0 0 var(--radius) var(--radius);
                      padding: 6px 10px; display: flex; align-items: center; gap: 10px; }
-  .ff-panel        { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .ff-panel        { display: flex; flex-direction: column; margin-top: 4px; }
   .ff-panel-inner  { display: flex; flex-direction: column; gap: 4px; }
 
   @media (min-width: 700px) {
@@ -79,9 +79,9 @@ export function renderResults({ exercise, weight, unit, score, ruleResults }) {
         <div class="ff-score-desktop" style="flex-direction:column;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #1e1e1e">
           <div style="display:flex;justify-content:space-between;align-items:baseline">
             <span style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Form Score</span>
-            <span style="font-size:1.5rem;font-weight:800;color:${scoreColor(score)};line-height:1">${score}</span>
+            <span style="font-size:1.5rem;font-weight:800;color:${scoreColorVar(score)};line-height:1">${score}</span>
           </div>
-          ${scoreBarHTML(score)}
+          <div style="margin-bottom:0">${scoreBarHTML(score)}</div>
         </div>
         ${issueRows}
       </div>
