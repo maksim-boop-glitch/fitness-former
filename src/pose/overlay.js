@@ -27,12 +27,14 @@ const RULE_ANGLES = {
   // Push-up
   body_straight:      { a: 'L_SHOULDER', b: 'L_HIP',      c: 'L_ANKLE'  },
   elbows_not_flared:  { a: 'L_SHOULDER', b: 'L_ELBOW',    c: 'L_WRIST'  },
-  full_depth:         { a: 'L_SHOULDER', b: 'L_ELBOW',    c: 'L_WRIST'  },
+  full_depth:         { a: 'L_SHOULDER', b: 'L_ELBOW',    c: 'L_WRIST'  }, // same triplet as elbows_not_flared — intentional, threshold differs
   // Bench press
   elbows_at_75:       { a: 'L_HIP',      b: 'L_SHOULDER', c: 'L_ELBOW'  },
   bar_to_lower_chest: null,
   scapular_retraction:null,
 };
+
+const SEVERITY_COLOR_MAP = { error: '#cc2200', warning: '#cc8800' };
 
 // Skeleton connections drawn as bones between joints
 const BONES = [
@@ -65,13 +67,6 @@ export function getJointColor(jointName, results) {
   return hasError ? '#cc2200' : '#cc8800';
 }
 
-/**
- * Estimates where the floor/bench surface is and draws a reference line.
- *
- * Vertical exercises (squat, deadlift): floor at ankle level.
- * Push-up: floor at wrist level (hands on ground).
- * Bench press: bench surface at shoulder/hip level.
- */
 function drawAngleBadge(ctx, vx, vy, ax, ay, cx, cy, deg, color) {
   const R = 22;
 
@@ -113,6 +108,13 @@ function drawAngleBadge(ctx, vx, vy, ax, ay, cx, cy, deg, color) {
   ctx.textBaseline = 'alphabetic';
 }
 
+/**
+ * Estimates where the floor/bench surface is and draws a reference line.
+ *
+ * Vertical exercises (squat, deadlift): floor at ankle level.
+ * Push-up: floor at wrist level (hands on ground).
+ * Bench press: bench surface at shoulder/hip level.
+ */
 function drawSurface(ctx, width, height, landmarks, exercise) {
   let surfaceY = null;
   let label = 'Floor';
@@ -208,7 +210,6 @@ export function drawOverlay(ctx, width, height, landmarks, ruleResults, exercise
   });
 
   // ── Angle badges at failing/warning joints ─────────────────────────────
-  const SEVERITY_COLOR_MAP = { error: '#cc2200', warning: '#cc8800' };
   ruleResults
     .filter(r => !r.pass && RULE_ANGLES[r.id])
     .forEach(r => {
