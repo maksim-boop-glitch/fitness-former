@@ -11,40 +11,85 @@ const EXERCISE_LABELS = {
 const SEVERITY_COLOR = { error: 'var(--score-red)', warning: 'var(--score-amber)' };
 const SEVERITY_ICON  = { error: '✗', warning: '~' };
 
+function scoreColor(score) {
+  if (score >= 75) return 'var(--score-green)';
+  if (score >= 51) return 'var(--score-amber)';
+  return 'var(--score-red)';
+}
+
 export function renderResults({ exercise, weight, unit, score, ruleResults }) {
   const label = EXERCISE_LABELS[exercise] ?? exercise;
 
   const issueRows = ruleResults.map(r => {
     if (r.pass) {
-      return `<div style="background:#001a08;border-left:3px solid var(--score-green);padding:8px 10px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:4px">
+      return `<div style="background:#001a08;border-left:3px solid var(--score-green);padding:8px 10px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:0">
         <div style="color:var(--score-green);font-weight:700;font-size:0.7rem">✓ ${r.label}</div>
       </div>`;
     }
     const col = SEVERITY_COLOR[r.severity] ?? 'var(--score-red)';
     const icon = SEVERITY_ICON[r.severity] ?? '✗';
-    return `<div style="background:#1a0800;border-left:3px solid ${col};padding:8px 10px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:4px">
+    return `<div style="background:#1a0800;border-left:3px solid ${col};padding:8px 10px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:0">
       <div style="color:${col};font-weight:700;font-size:0.7rem">${icon} ${r.label}</div>
       <div style="color:var(--text-muted);font-size:0.65rem;margin-top:3px">${r.cue}</div>
     </div>`;
   }).join('');
 
   return `
-    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
-      <span style="font-weight:700;font-size:0.85rem">${label}</span>
-      <span style="color:var(--text-muted);font-size:0.7rem">· ${weight} ${unit}</span>
-      <span style="margin-left:auto">${scoreBadgeHTML(score)}</span>
-    </div>
+<style>
+  .ff-results-body { display: flex; flex-direction: column; }
+  .ff-results-main { display: flex; flex-direction: column; gap: 0; }
+  .ff-video-wrap   { position: relative; background: #000; border-radius: var(--radius) var(--radius) 0 0; overflow: hidden; }
+  .ff-score-strip  { background: #111; border-radius: 0 0 var(--radius) var(--radius);
+                     padding: 6px 10px; display: flex; align-items: center; gap: 10px; }
+  .ff-panel        { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .ff-panel-inner  { display: flex; flex-direction: column; gap: 4px; }
 
-    ${scoreBarHTML(score)}
+  @media (min-width: 700px) {
+    .ff-results-main { flex-direction: row; align-items: stretch; }
+    .ff-video-wrap   { flex: 1.2; border-radius: var(--radius) 0 0 var(--radius); }
+    .ff-score-strip  { display: none; }
+    .ff-panel        { flex: 1; margin-top: 0; min-width: 0; }
+    .ff-panel-inner  { background: #111; border: 1px solid #1e1e1e;
+                       border-left: none; border-radius: 0 var(--radius) var(--radius) 0;
+                       padding: 12px; height: 100%; box-sizing: border-box; }
+    .ff-score-desktop { display: flex !important; }
+  }
+  .ff-score-desktop { display: none; }
+</style>
 
-    <div style="position:relative;background:#000;border-radius:var(--radius);margin-bottom:0.75rem;overflow:hidden">
+<div class="ff-results-body">
+  <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap">
+    <span style="font-weight:700;font-size:0.85rem">${label}</span>
+    <span style="color:var(--text-muted);font-size:0.7rem">· ${weight} ${unit}</span>
+    <span style="margin-left:auto">${scoreBadgeHTML(score)}</span>
+  </div>
+
+  <div class="ff-results-main">
+    <div class="ff-video-wrap">
       <video id="result-video" style="width:100%;display:block" controls playsinline></video>
       <canvas id="overlay-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas>
     </div>
 
-    <div style="margin-bottom:1rem">${issueRows}</div>
+    <div class="ff-score-strip">
+      ${scoreBarHTML(score)}
+    </div>
 
-    <button class="btn-primary" id="analyze-another">Analyze Another Video</button>
+    <div class="ff-panel">
+      <div class="ff-panel-inner">
+        <div class="ff-score-desktop" style="flex-direction:column;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #1e1e1e">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Form Score</span>
+            <span style="font-size:1.5rem;font-weight:800;color:${scoreColor(score)};line-height:1">${score}</span>
+          </div>
+          ${scoreBarHTML(score)}
+        </div>
+        ${issueRows}
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="analyze-another" style="margin-top:0.75rem">Analyze Another Video</button>
+</div>
   `;
 }
 
