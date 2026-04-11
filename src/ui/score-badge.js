@@ -35,9 +35,9 @@ export function scoreBadgeHTML(score) {
  * @param {number} score 0-100
  * @returns {string} HTML
  */
-export function scoreBarHTML(score) {
+export function scoreBarHTML(score, { marginBottom = '0.75rem' } = {}) {
   return `
-    <div style="margin-bottom:0.75rem">
+    <div style="margin-bottom:${marginBottom}">
       <div style="height:8px;border-radius:4px;background:linear-gradient(90deg,var(--score-red),var(--score-amber),var(--score-green));position:relative">
         <div style="position:absolute;left:${score}%;top:-3px;width:2px;height:14px;background:#fff;border-radius:2px;transform:translateX(-50%)"></div>
       </div>

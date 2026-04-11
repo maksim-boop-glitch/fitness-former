@@ -71,7 +71,7 @@ export function renderResults({ exercise, weight, unit, score, ruleResults }) {
     </div>
 
     <div class="ff-score-strip">
-      ${scoreBarHTML(score)}
+      ${scoreBarHTML(score, { marginBottom: '0' })}
     </div>
 
     <div class="ff-panel">
@@ -81,7 +81,7 @@ export function renderResults({ exercise, weight, unit, score, ruleResults }) {
             <span style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Form Score</span>
             <span style="font-size:1.5rem;font-weight:800;color:${scoreColorVar(score)};line-height:1">${score}</span>
           </div>
-          <div style="margin-bottom:0">${scoreBarHTML(score)}</div>
+          ${scoreBarHTML(score, { marginBottom: '0' })}
         </div>
         ${issueRows}
       </div>
