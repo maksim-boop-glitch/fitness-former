@@ -85,7 +85,6 @@ function drawFrame(ctx, w, h, joints) {
   const headR = Math.max(6, w * 0.065);
   ctx.beginPath();
   ctx.arc(hx * w, hy * h, headR, 0, Math.PI * 2);
-  ctx.fillStyle = 'none';
   ctx.strokeStyle = '#00cc44';
   ctx.lineWidth = Math.max(2, w * 0.022);
   ctx.stroke();
