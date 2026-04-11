@@ -1,5 +1,273 @@
-import { isMobile, startCameraPreview, stopCameraStream, getPermissionInstructions } from '../ui/camera-recorder.js';
+# Camera Recording Implementation Plan
 
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Replace the single drop zone on the Analyze tab with side-by-side Record | Upload cards — desktop uses inline getUserMedia preview with record/stop/timer, mobile delegates to the OS camera via `capture="environment"`, and permission denial shows inline browser-specific instructions.
+
+**Architecture:** Three-file change: new `src/ui/camera-recorder.js` owns all MediaStream/MediaRecorder state and UI injection; `src/tabs/analyze.js` wires the new cards, file inputs, and camera events; `src/app.js` calls `stopCameraStream()` on tab switch.
+
+**Tech Stack:** Vanilla JS, Web MediaStream API (`getUserMedia`), MediaRecorder API, HTML file inputs with `capture` attribute, Vite dev server
+
+---
+
+## File Map
+
+| Action | File | Responsibility |
+|--------|------|----------------|
+| Create | `src/ui/camera-recorder.js` | `isMobile`, `getPermissionInstructions`, `startCameraPreview`, `stopCameraStream` |
+| Modify | `src/tabs/analyze.js` | Replace drop zone HTML, add card click handlers, shared file-change handler |
+| Modify | `src/app.js` | Import + call `stopCameraStream` in `switchTab` |
+
+---
+
+## Task 1: Create `src/ui/camera-recorder.js`
+
+**Files:**
+- Create: `src/ui/camera-recorder.js`
+
+- [ ] **Step 1: Write the file**
+
+```js
+// src/ui/camera-recorder.js
+
+let stream = null;
+
+export function isMobile() {
+  return navigator.maxTouchPoints > 0;
+}
+
+export function getPermissionInstructions() {
+  const ua = navigator.userAgent;
+  if (/Chrome/.test(ua) && !/Edg/.test(ua)) {
+    return {
+      browser: 'Chrome',
+      steps: ['Click 🔒 in the address bar', 'Set Camera → Allow', 'Reload the page'],
+    };
+  }
+  if (/Edg/.test(ua)) {
+    return {
+      browser: 'Edge',
+      steps: ['Click 🔒 in the address bar', 'Set Camera → Allow', 'Reload the page'],
+    };
+  }
+  if (/Firefox/.test(ua)) {
+    return {
+      browser: 'Firefox',
+      steps: ['Click the camera icon in the address bar', 'Choose "Allow"'],
+    };
+  }
+  if (/Safari/.test(ua) && !/Chrome/.test(ua)) {
+    return {
+      browser: 'Safari',
+      steps: [
+        'Open System Settings → Privacy & Security → Camera',
+        'Enable for your browser',
+        'Reload the page',
+      ],
+    };
+  }
+  return {
+    browser: 'your browser',
+    steps: ['Open browser settings', 'Find Camera permissions', 'Allow this site'],
+  };
+}
+
+export function stopCameraStream() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+}
+
+/**
+ * Replaces container.innerHTML with a live camera preview UI.
+ * Calls getUserMedia({ video: true, audio: false }).
+ * Returns { onFile(callback), cancel() }.
+ *   - onFile callback receives a File object when recording stops.
+ *   - cancel() stops the stream and restores container.innerHTML to empty string.
+ * Throws if permission is denied or device not found.
+ */
+export async function startCameraPreview(container) {
+  stopCameraStream();
+
+  stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+
+  const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
+  const ext = mimeType === 'video/webm' ? 'webm' : 'mp4';
+
+  container.innerHTML = `
+    <div id="camera-preview-wrap" style="
+      position:relative;
+      background:#000;
+      border-radius:var(--radius);
+      overflow:hidden;
+      margin-bottom:0.75rem;
+    ">
+      <video id="camera-live" muted playsinline style="width:100%;display:block"></video>
+      <div id="camera-timer" style="
+        display:none;
+        position:absolute;
+        top:8px;
+        right:8px;
+        background:rgba(0,0,0,0.7);
+        border-radius:4px;
+        padding:2px 8px;
+        font-size:0.75rem;
+        color:#fff;
+        font-weight:700;
+      ">
+        <span id="camera-rec-dot" style="color:#cc2200">● </span><span id="camera-time">0:00</span>
+      </div>
+      <div style="
+        position:absolute;
+        bottom:12px;
+        left:0;
+        right:0;
+        display:flex;
+        justify-content:center;
+      ">
+        <button id="camera-record-btn" style="
+          width:48px;
+          height:48px;
+          border-radius:50%;
+          background:#cc2200;
+          border:3px solid #fff;
+          cursor:pointer;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+        ">
+          <div id="camera-record-icon" style="
+            width:16px;
+            height:16px;
+            border-radius:50%;
+            background:#fff;
+          "></div>
+        </button>
+      </div>
+    </div>
+    <div style="text-align:center;margin-bottom:0.75rem">
+      <a id="camera-cancel" href="#" style="color:var(--text-muted);font-size:0.75rem;text-decoration:none">× Cancel</a>
+    </div>
+  `;
+
+  const liveVideo = document.getElementById('camera-live');
+  liveVideo.srcObject = stream;
+  await liveVideo.play();
+
+  let fileCallback = null;
+  let recorder = null;
+  let chunks = [];
+  let timerInterval = null;
+  let autoStopTimeout = null;
+  let elapsed = 0;
+  let recording = false;
+
+  const timerEl = document.getElementById('camera-timer');
+  const timeEl = document.getElementById('camera-time');
+  const recDot = document.getElementById('camera-rec-dot');
+  const recordBtn = document.getElementById('camera-record-btn');
+  const recordIcon = document.getElementById('camera-record-icon');
+
+  function formatTime(s) {
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  function startTimer() {
+    elapsed = 0;
+    timerEl.style.display = 'block';
+    timerInterval = setInterval(() => {
+      elapsed++;
+      timeEl.textContent = formatTime(elapsed);
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+
+  function stopRecording() {
+    if (!recording) return;
+    recording = false;
+    clearTimeout(autoStopTimeout);
+    stopTimer();
+    recorder.stop();
+  }
+
+  recordBtn.addEventListener('click', () => {
+    if (!recording) {
+      // Start recording
+      recording = true;
+      chunks = [];
+      recorder = new MediaRecorder(stream, { mimeType });
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        const file = new File([blob], `recording.${ext}`, { type: mimeType });
+        stopCameraStream();
+        if (fileCallback) fileCallback(file);
+      };
+      recorder.start();
+      // Change button to stop square
+      recordIcon.style.borderRadius = '2px';
+      // Start timer and 60s auto-stop
+      startTimer();
+      autoStopTimeout = setTimeout(stopRecording, 60000);
+    } else {
+      stopRecording();
+    }
+  });
+
+  document.getElementById('camera-cancel').addEventListener('click', e => {
+    e.preventDefault();
+    stopRecording();
+    stopCameraStream();
+    container.innerHTML = '';
+  });
+
+  return {
+    onFile(callback) {
+      fileCallback = callback;
+    },
+    cancel() {
+      stopRecording();
+      stopCameraStream();
+      container.innerHTML = '';
+    },
+  };
+}
+```
+
+- [ ] **Step 2: Verify the file exists and has no syntax errors**
+
+```bash
+node --input-type=module < src/ui/camera-recorder.js 2>&1 | head -5
+```
+
+Expected: no output (Node will throw on syntax errors; browser-only APIs like `navigator` are fine to reference since they're inside functions not called at import time). If you see a syntax error, fix it before continuing.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/ui/camera-recorder.js
+git commit -m "feat: add camera-recorder module (isMobile, getPermissionInstructions, startCameraPreview, stopCameraStream)"
+```
+
+---
+
+## Task 2: Update `src/tabs/analyze.js`
+
+**Files:**
+- Modify: `src/tabs/analyze.js`
+
+### 2a — Replace `renderAnalyze` HTML
+
+- [ ] **Step 1: Replace the drop zone with two-card layout + both file inputs**
+
+Replace the entire `renderAnalyze` function body with this return value (keep everything below `video-preview-wrap` unchanged):
+
+```js
 export function renderAnalyze() {
   return `
     <div class="section-label" style="margin-top:0.5rem">Fitness Former</div>
@@ -83,7 +351,21 @@ export function renderAnalyze() {
     </p>
   `;
 }
+```
 
+### 2b — Rewrite `attachAnalyzeListeners`
+
+- [ ] **Step 2: Add import at the top of the file and rewrite `attachAnalyzeListeners`**
+
+Add this import at the very top of `src/tabs/analyze.js` (before the `export function renderAnalyze` line):
+
+```js
+import { isMobile, startCameraPreview, stopCameraStream, getPermissionInstructions } from '../ui/camera-recorder.js';
+```
+
+Then replace the entire `attachAnalyzeListeners` function with:
+
+```js
 export function attachAnalyzeListeners() {
   let weight = 135;
   let unit = 'lbs';
@@ -262,6 +544,10 @@ export function attachAnalyzeListeners() {
     try {
       const recorder = await startCameraPreview(inputModeWrap);
       recorder.onFile(file => {
+        // Camera preview replaced itself with empty — restore the two-card UI
+        inputModeWrap.innerHTML = document.getElementById('input-mode-wrap')
+          ? inputModeWrap.innerHTML  // already replaced by startCameraPreview
+          : '';
         handleVideoFile(file);
       });
     } catch (err) {
@@ -316,3 +602,131 @@ export function attachAnalyzeListeners() {
     }
   });
 }
+```
+
+- [ ] **Step 3: Verify the app builds without errors**
+
+```bash
+npx vite build 2>&1 | tail -20
+```
+
+Expected: `✓ built in` with no errors. If there are import errors, check that `../ui/camera-recorder.js` path is correct relative to `src/tabs/analyze.js`.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/tabs/analyze.js
+git commit -m "feat: replace analyze drop zone with Record | Upload cards; wire camera and file handlers"
+```
+
+---
+
+## Task 3: Update `src/app.js` — call `stopCameraStream` on tab switch
+
+**Files:**
+- Modify: `src/app.js`
+
+- [ ] **Step 1: Add import and call**
+
+In `src/app.js`, update the import block at the top to add `stopCameraStream`:
+
+```js
+import { renderNav } from './ui/nav.js';
+import { renderAnalyze } from './tabs/analyze.js';
+import { renderExercises } from './tabs/exercises.js';
+import { renderHistory, attachHistoryListeners } from './tabs/history.js';
+import { stopAnimation } from './ui/exercise-animation.js';
+import { stopCameraStream } from './ui/camera-recorder.js';
+```
+
+Then update the first line of `switchTab` to call both:
+
+```js
+function switchTab(id) {
+  stopAnimation();
+  stopCameraStream();
+  // ... rest unchanged
+```
+
+- [ ] **Step 2: Verify the app builds without errors**
+
+```bash
+npx vite build 2>&1 | tail -20
+```
+
+Expected: `✓ built in` with no errors.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/app.js
+git commit -m "feat: stop camera stream when switching tabs"
+```
+
+---
+
+## Task 4: Manual smoke test
+
+No automated tests needed per spec. Verify the feature works in the browser.
+
+- [ ] **Step 1: Start the dev server (if not already running)**
+
+```bash
+npm run dev
+```
+
+Open http://localhost:5173 in a browser.
+
+- [ ] **Step 2: Verify Upload path**
+
+1. Go to Analyze tab.
+2. Click the Upload card — file picker opens (no `capture` attribute, desktop file picker).
+3. Select a video file — preview appears, Analyze button enables.
+
+- [ ] **Step 3: Verify desktop Record path (happy path)**
+
+1. Click the Record card.
+2. Grant camera permission when prompted.
+3. Live preview appears with a red ● button and Cancel link.
+4. Click ● to start recording — button becomes ■, timer counts up.
+5. Click ■ to stop — preview disappears, video preview appears with the recording, Analyze button enables.
+
+- [ ] **Step 4: Verify 60-second auto-stop**
+
+1. Start recording.
+2. Wait 60 seconds — recording should stop automatically.
+
+- [ ] **Step 5: Verify Cancel**
+
+1. Click Record card, grant permission.
+2. Click Cancel — camera preview disappears, two-card layout is gone (blank area), no crash.
+
+> Note: After cancel, `inputModeWrap` is cleared by `cancel()`. The cards won't re-appear until the Analyze tab is reloaded. This is acceptable behavior per spec.
+
+- [ ] **Step 6: Verify permission denied path**
+
+1. Deny camera permission when prompted (or block it in browser settings).
+2. The two cards remain visible.
+3. An error card appears below with browser-specific unblock instructions.
+4. Click "Upload instead" — file picker opens.
+5. Click "Try again" — error card removes, camera preview re-attempts.
+
+- [ ] **Step 7: Verify tab switch stops stream**
+
+1. Open Record (live camera preview visible).
+2. Switch to History tab.
+3. Switch back to Analyze tab — camera indicator light in OS should be off (stream released).
+
+- [ ] **Step 8: Verify mobile hint (if testing on mobile or touch device)**
+
+1. Tap Record card.
+2. A hint appears: "📱 If the camera didn't open..."
+3. Wait 6 seconds — hint disappears.
+4. Or: tap × to dismiss immediately.
+5. Or: select a file via OS camera — hint disappears via `change` event.
+
+- [ ] **Step 9: Commit smoke test completion note**
+
+```bash
+git commit --allow-empty -m "chore: camera recording smoke test passed"
+```

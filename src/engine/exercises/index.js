@@ -1,13 +1,16 @@
-import { SQUAT_RULES }    from './squat.js';
-import { DEADLIFT_RULES } from './deadlift.js';
-import { BENCH_RULES }    from './bench-press.js';
-import { PUSHUP_RULES }   from './push-up.js';
+import { getSquatRules }    from './squat.js';
+import { getDeadliftRules } from './deadlift.js';
+import { getBenchRules }    from './bench-press.js';
+import { getPushUpRules }   from './push-up.js';
 
-export const EXERCISE_RULES = {
-  squat:           SQUAT_RULES,
-  deadlift:        DEADLIFT_RULES,
-  'bench-press':   BENCH_RULES,
-  'push-up':       PUSHUP_RULES,
-};
+export function getExerciseRules(exercise, shinLength) {
+  const factories = {
+    squat:         getSquatRules,
+    deadlift:      getDeadliftRules,
+    'bench-press': getBenchRules,
+    'push-up':     getPushUpRules,
+  };
+  return factories[exercise]?.(shinLength) ?? [];
+}
 
-export const SUPPORTED_EXERCISES = Object.keys(EXERCISE_RULES);
+export const SUPPORTED_EXERCISES = ['squat', 'deadlift', 'bench-press', 'push-up'];

@@ -108,4 +108,46 @@ describe('evaluateRules', () => {
     // rule gets world landmarks (x=0.99), not image landmarks (x=0.1)
     expect(results[0].pass).toBe(true);
   });
+
+  it('only evaluates frames in phaseFrames when provided', () => {
+    const rule = {
+      id: 'phase_test',
+      label: 'Phase test',
+      severity: 'error',
+      cue: 'Fix it',
+      check: (lm) => lm[0].x > 0.5,
+    };
+    const passing = fakeLandmarks({ 0: { x: 0.9 } });
+    const failing = fakeLandmarks({ 0: { x: 0.1 } });
+    // frames: [failing(0), passing(1), failing(2)]
+    // phaseFrames = {1} → only frame 1 (passing) is evaluated → rule passes
+    const phaseFrames = new Set([1]);
+    const results = evaluateRules([rule], [failing, passing, failing], phaseFrames);
+    expect(results[0].pass).toBe(true);
+  });
+
+  it('passes all frames when phaseFrames is null', () => {
+    const rule = {
+      id: 'null_phase',
+      label: 'Null phase',
+      severity: 'error',
+      cue: 'Fix it',
+      check: () => false,
+    };
+    const frames = [fakeLandmarks(), fakeLandmarks()];
+    const results = evaluateRules([rule], frames, null);
+    expect(results[0].pass).toBe(false);
+  });
+
+  it('returns pass:true for all rules when phaseFrames is empty set', () => {
+    const rule = {
+      id: 'empty_phase',
+      label: 'Empty phase',
+      severity: 'error',
+      cue: 'Fix it',
+      check: () => false,
+    };
+    const results = evaluateRules([rule], [fakeLandmarks()], new Set());
+    expect(results[0].pass).toBe(true);
+  });
 });
