@@ -2,7 +2,9 @@ import { processVideo } from '../pose/detector.js';
 import { detectExercise } from './exercise-detector.js';
 import { evaluateRules } from './rules.js';
 import { calculateScore } from './score.js';
-import { EXERCISE_RULES } from './exercises/index.js';
+import { getExerciseRules } from './exercises/index.js';
+import { computeBodyMetrics } from './body-metrics.js';
+import { getBottomPhaseFrames } from './rep-phases.js';
 import { saveSession } from '../storage.js';
 
 /**
@@ -20,7 +22,7 @@ export async function runAnalysis(videoEl, weight, unit, exerciseOverride = null
     if (btn) btn.textContent = `Analyzing… ${Math.round(p * 100)}%`;
   };
 
-  const frames = await processVideo(videoEl, 10, updateProgress);
+  const frames = await processVideo(videoEl, 5, updateProgress);
 
   if (frames.length === 0) {
     const btn = document.getElementById('analyze-btn');
@@ -33,8 +35,11 @@ export async function runAnalysis(videoEl, weight, unit, exerciseOverride = null
   }
 
   const exercise = exerciseOverride ?? detectExercise(frames) ?? 'squat';
-  const rules = EXERCISE_RULES[exercise] ?? [];
-  const ruleResults = evaluateRules(rules, frames);
+  const worldFrames = frames.map(f => f.world ?? f);
+  const { shinLength } = computeBodyMetrics(worldFrames);
+  const phaseFrames = getBottomPhaseFrames(worldFrames, exercise);
+  const rules = getExerciseRules(exercise, shinLength);
+  const ruleResults = evaluateRules(rules, frames, phaseFrames);
   const score = calculateScore(ruleResults);
 
   saveSession({ exercise, weight, unit, score, ruleResults });
