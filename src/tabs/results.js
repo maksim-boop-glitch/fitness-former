@@ -102,17 +102,29 @@ export function attachResultsListeners({ frames, ruleResults, exercise }) {
     resultVideo.src = videoSrc;
   }
 
-  resultVideo.addEventListener('timeupdate', () => {
+  function renderFrame(time) {
     if (!frames.length) return;
     const ctx = canvas.getContext('2d');
     canvas.width  = resultVideo.videoWidth  || canvas.clientWidth;
     canvas.height = resultVideo.videoHeight || canvas.clientHeight;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const fps = 30 / 10;
-    const frameIdx = Math.min(Math.floor(resultVideo.currentTime * fps), frames.length - 1);
+    const fps = frames.fps ?? (frames.length / resultVideo.duration);
+    const frameIdx = Math.min(Math.round(time * fps), frames.length - 1);
     drawOverlay(ctx, canvas.width, canvas.height, frames[frameIdx].image ?? frames[frameIdx], ruleResults, exercise);
-  });
+  }
+
+  if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+    // Fires exactly when each video frame is displayed — precise sync, no lag
+    function onVideoFrame(_, { mediaTime }) {
+      renderFrame(mediaTime);
+      resultVideo.requestVideoFrameCallback(onVideoFrame);
+    }
+    resultVideo.requestVideoFrameCallback(onVideoFrame);
+  } else {
+    // Fallback: timeupdate fires ~4x/sec — less smooth but functional
+    resultVideo.addEventListener('timeupdate', () => renderFrame(resultVideo.currentTime));
+  }
 
   document.getElementById('analyze-another').addEventListener('click', () => {
     import('../app.js').then(m => m.navigateTo('analyze'));

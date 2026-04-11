@@ -73,8 +73,10 @@ export async function startCameraPreview(container) {
       border-radius:var(--radius);
       overflow:hidden;
       margin-bottom:0.75rem;
+      width:100%;
+      max-height:calc(100dvh - 140px);
     ">
-      <video id="camera-live" muted playsinline style="width:100%;display:block"></video>
+      <video id="camera-live" muted playsinline style="width:100%;height:100%;object-fit:contain;display:block;transform:scaleX(-1)"></video>
       <div id="camera-timer" style="
         display:none;
         position:absolute;
@@ -126,6 +128,11 @@ export async function startCameraPreview(container) {
   liveVideo.srcObject = stream;
   try {
     await liveVideo.play();
+    const { width: camW, height: camH } = stream.getVideoTracks()[0].getSettings();
+    if (camW && camH) {
+      const wrap = document.getElementById('camera-preview-wrap');
+      wrap.style.aspectRatio = `${camW} / ${camH}`;
+    }
   } catch (err) {
     stopCameraStream();
     container.innerHTML = savedHTML;
