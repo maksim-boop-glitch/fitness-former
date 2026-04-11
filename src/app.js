@@ -1,7 +1,7 @@
 import { renderNav } from './ui/nav.js';
 import { renderAnalyze } from './tabs/analyze.js';
 import { renderExercises } from './tabs/exercises.js';
-import { renderHistory } from './tabs/history.js';
+import { renderHistory, attachHistoryListeners } from './tabs/history.js';
 
 const TABS = [
   { id: 'analyze',   label: 'Analyze',   icon: '📹', render: renderAnalyze },
@@ -27,7 +27,7 @@ function switchTab(id) {
     import('./tabs/exercises.js').then(m => m.attachExercisesListeners());
   }
   if (id === 'history') {
-    import('./tabs/history.js').then(m => m.attachHistoryListeners());
+    attachHistoryListeners();
   }
 }
 
